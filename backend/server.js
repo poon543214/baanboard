@@ -3,160 +3,162 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-require('dotenv').config(); // โหลดค่าจาก .env
+const multer = require('multer'); // เพิ่ม multer
+const cloudinary = require('cloudinary').v2; // เพิ่ม Cloudinary
+const { CloudinaryStorage } = require('multer-storage-cloudinary'); // ตัวเชื่อม
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const SECRET_KEY = process.env.SECRET_KEY; // ห้ามลืมใส่ใน .env
+const SECRET_KEY = process.env.SECRET_KEY;
 
 // --- 1. Middleware ---
-app.use(cors()); // อนุญาตให้ Frontend ยิงเข้ามาได้
-app.use(express.json()); // อ่าน JSON จาก Body
+app.use(cors());
+app.use(express.json());
 
 // --- 2. Database Connection ---
 mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('✅ MongoDB Connected Successfully'))
-    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+    .then(() => console.log('MongoDB Connected'))
+    .catch(err => console.error('DB Error:', err));
 
-// --- 3. Mongoose Schemas (โครงสร้างตาราง) ---
+// --- 3. Cloudinary Setup 
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
-// User Schema
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'baanboard_posts', // ชื่อโฟลเดอร์ใน Cloudinary
+        allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+    },
+});
+
+const upload = multer({ storage: storage });
+
+// --- 4. Schemas ---
 const userSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
+    fullname: { type: String, required: true }, // ชื่อ-นามสกุล
+    email: { type: String, required: true, unique: true }, // ใช้ Email เป็น ID หลักแทน Username
+    tel: { type: String, required: true }, // เบอร์โทร
     password: { type: String, required: true },
-    role: { type: String, enum: ['user', 'admin'], default: 'user' } // แยก Role ตรงนี้
+    role: { type: String, enum: ['user', 'admin'], default: 'user' }
 });
 const User = mongoose.model('User', userSchema);
 
-// Post Schema
 const postSchema = new mongoose.Schema({
     title: { type: String, required: true },
     content: { type: String, required: true },
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // ผูกกับ User
+    image: { type: String }, // เก็บ URL รูป
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     created_at: { type: Date, default: Date.now }
 });
 const Post = mongoose.model('Post', postSchema);
 
-// --- 4. Custom Middleware: เช็ค Token ---
+// --- 5. Auth Middleware ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Format: Bearer <token>
-
-    if (!token) return res.status(401).json({ message: "Access Denied: No Token" });
+    const token = authHeader && authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ message: "No Token" });
 
     jwt.verify(token, SECRET_KEY, (err, user) => {
         if (err) return res.status(403).json({ message: "Invalid Token" });
-        req.user = user; // แปะข้อมูล user (id, role) ไว้ใช้ต่อ
+        req.user = user;
         next();
     });
 };
 
-// --- 5. Routes (Authentication) ---
-
-// Register (สมัครสมาชิกทั่วไป)
+// --- 6. Routes (Auth) ---
 app.post('/register', async (req, res) => {
     try {
-        const { username, password } = req.body;
-        // เช็คชื่อซ้ำ
-        const existingUser = await User.findOne({ username });
-        if (existingUser) return res.status(400).json({ message: "Username already exists" });
+        // รับค่าให้ครบตามหน้าเว็บ (Full name, Email, Tel, Password)
+        const { fullname, email, tel, password } = req.body;
 
-        // เข้ารหัส Password
+        // เช็คว่าอีเมลซ้ำไหม (แทนเช็ค username)
+        const existingUser = await User.findOne({ email });
+        if (existingUser) return res.status(400).json({ message: "Email already exists" });
+
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // สร้าง User
-        const newUser = await User.create({
-            username,
+        // สร้าง User ใหม่
+        await User.create({
+            fullname,
+            email,
+            tel,
             password: hashedPassword,
-            role: 'user' // Default เป็น user
+            role: 'user'
         });
 
-        res.status(201).json({ message: "User registered", userId: newUser._id });
+        res.status(201).json({ message: "Registered successfully" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Login
+// --- แก้ไข Route Login (ต้อง Login ด้วย Email) ---
 app.post('/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
-        const user = await User.findOne({ username });
+        const { email, password } = req.body; // รับ Email แทน Username
+        
+        // ค้นหาจาก Email
+        const user = await User.findOne({ email });
+        
+        if (!user || !(await bcrypt.compare(password, user.password))) {
+            return res.status(400).json({ message: "Invalid email or password" });
+        }
 
-        if (!user) return res.status(400).json({ message: "User not found" });
-
-        // เช็ค Password
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) return res.status(400).json({ message: "Invalid password" });
-
-        // สร้าง Token (ใส่ ID และ Role)
+        // ใน Token ใส่ fullname ไปด้วย เผื่อเอาไปโชว์มุมขวาบน
         const token = jwt.sign(
-            { id: user._id, role: user.role, username: user.username }, 
+            { id: user._id, role: user.role, fullname: user.fullname }, 
             SECRET_KEY, 
             { expiresIn: '2h' }
         );
 
-        res.json({ message: "Login success", token, role: user.role });
+        res.json({ token, role: user.role, fullname: user.fullname });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Create Admin (เฉพาะ Admin เท่านั้นที่สร้าง Admin ได้)
-app.post('/create-admin', authenticateToken, async (req, res) => {
-    if (req.user.role !== 'admin') {
-        return res.status(403).json({ message: "Access Denied: Admins only" });
-    }
-    
-    // Logic เหมือน Register แต่บังคับ role: 'admin'
-    try {
-        const { username, password } = req.body;
-        const hashedPassword = await bcrypt.hash(password, 10);
-        await User.create({ username, password: hashedPassword, role: 'admin' });
-        res.status(201).json({ message: "New Admin created" });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+// --- 7. Routes (Posts) ---
 
-// --- 6. Routes (Posts) ---
-
-// Get Posts (พร้อม Filter & Sort)
-app.get('/getpost', authenticateToken, async (req, res) => {
+// Get Posts (ดูได้ทุกคน ไม่ต้อง Login)
+app.get('/getpost', async (req, res) => {
     try {
-        const { order_by, search } = req.query;
+        const { search, order_by } = req.query;
         let query = {};
+        if (search) query.title = { $regex: search, $options: 'i' };
 
-        // Search Filter (ค้นหาจาก Title)
-        if (search) {
-            query.title = { $regex: search, $options: 'i' }; // 'i' คือไม่สนตัวพิมพ์เล็กใหญ่
-        }
-
-        // เตรียมคำสั่ง Find
-        let postsQuery = Post.find(query).populate('owner', 'username role'); // ดึงชื่อคนโพสต์มาด้วย
-
-        // Sort Filter
+        let posts = Post.find(query).populate('owner', 'fullname role');
+        
         if (order_by === 'post_date') {
-            postsQuery = postsQuery.sort({ created_at: -1 }); // ใหม่ -> เก่า
+            posts = posts.sort({ created_at: -1 });
         } else {
-            postsQuery = postsQuery.sort({ created_at: 1 }); // เก่า -> ใหม่
+            posts = posts.sort({ created_at: 1 });
         }
 
-        const posts = await postsQuery.exec();
-        res.json(posts);
+        res.json(await posts.exec());
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Create Post
-app.post('/post', authenticateToken, async (req, res) => {
+// Create Post (ต้อง Login + อัปรูปได้)
+// upload.single('image') คือตัวรับไฟล์จาก Frontend
+app.post('/post', authenticateToken, upload.single('image'), async (req, res) => {
     try {
         const { title, content } = req.body;
+        
+        // ถ้าอัปรูปสำเร็จ req.file.path จะเป็นลิงก์ URL จาก Cloudinary
+        const image = req.file ? req.file.path : null;
+
         const newPost = await Post.create({
             title,
             content,
-            owner: req.user.id // เอา ID จาก Token มาใส่
+            image, 
+            owner: req.user.id
         });
         res.status(201).json(newPost);
     } catch (err) {
@@ -164,50 +166,21 @@ app.post('/post', authenticateToken, async (req, res) => {
     }
 });
 
-// Edit Post (Patch)
-app.patch('/editpost/:id', authenticateToken, async (req, res) => {
-    try {
-        const { title, content } = req.body;
-        const post = await Post.findById(req.params.id);
-
-        if (!post) return res.status(404).json({ message: "Post not found" });
-
-        // Check Permission: เจ้าของโพสต์แก้ได้ หรือ Admin แก้ได้ทุกโพสต์
-        if (post.owner.toString() !== req.user.id && req.user.role !== 'admin') {
-            return res.status(403).json({ message: "You are not allowed to edit this post" });
-        }
-
-        // Update
-        if (title) post.title = title;
-        if (content) post.content = content;
-        await post.save();
-
-        res.json({ message: "Post updated", post });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// Delete Post (ลบโพสต์)
+// Delete Post
 app.delete('/deletepost/:id', authenticateToken, async (req, res) => {
     try {
         const post = await Post.findById(req.params.id);
-
-        if (!post) return res.status(404).json({ message: "Post not found" });
-
-        // Check Permission: เจ้าของลบได้ หรือ Admin ลบได้ทุกโพสต์ (ปุ่มแดง)
+        if (!post) return res.status(404).json({ message: "Not found" });
+        
         if (post.owner.toString() !== req.user.id && req.user.role !== 'admin') {
-            return res.status(403).json({ message: "You are not allowed to delete this post" });
+            return res.status(403).json({ message: "Unauthorized" });
         }
-
+        
         await Post.findByIdAndDelete(req.params.id);
-        res.json({ message: "Post deleted successfully" });
+        res.json({ message: "Deleted" });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// --- Start Server ---
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
