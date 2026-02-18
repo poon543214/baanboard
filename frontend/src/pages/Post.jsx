@@ -20,13 +20,13 @@ export default function Post() {
         setLoading(false);
       }
     };
-
     fetchPosts();
   }, []);
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
-
+  
+  console.log("post me : ", posts)
   return (
     <div className="min-h-screen bg-gray-50 px-10 py-8">
       <h1 className="text-2xl font-bold mb-6">My post - {user?.username}</h1>
@@ -53,7 +53,7 @@ export default function Post() {
               <p className="text-sm text-gray-500 mt-1">{post.description}</p>
 
               <div className="text-xs text-gray-400 mt-3">
-                {new Date(post.createdAt).toLocaleDateString()}
+                {new Date(post.created_at).toLocaleDateString()}
               </div>
             </div>
           </div>

@@ -9,8 +9,11 @@ const Configs = {
       register: "/register",
     },
     get: {
-      post: "/getpost",
+      post: "/post",
     },
+    post: {
+      newPost: "/post"
+    }
   },
 
   storage: {

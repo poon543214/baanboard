@@ -101,7 +101,8 @@ function PostCard() {
         <p className={`text-gray-600 text-sm mt-2`}>
           text text text text text text text text text text text text text text text
         </p>
-        <div className="flex gap-2 mt-3 text-xs">
+        <div className="flex gap-2 mt-3 text-xs item-center">
+          <h3 className="text-gray-600 text-sm">Tag</h3>
           <span className={`${textStyles.subheader} px-3 py-1 bg-primary text-white rounded-full`}>
             Sport
           </span>

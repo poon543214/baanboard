@@ -68,8 +68,9 @@ export default function Home() {
   // ]
   const [posts, setPosts] = useState([])
 
+  const validTags = ["News", "Sport", "Politic", "Entertainment", "Game", "Music"]
   const tags = ["All post", "News", "Sport", "Politic", "Entertainment", "Game", "Music"]
-
+  const navigate = useNavigate()
   const [selectedTag, setSelectedTag] = useState("All post")
   const [sortType, setSortType] = useState("new")
 
@@ -82,7 +83,6 @@ export default function Home() {
         console.error("Fetch post error:", err)
       }
     }
-
     fetchPosts()
   }, [])
 
@@ -90,7 +90,15 @@ export default function Home() {
     let filtered =
       selectedTag === "All post"
         ? posts
-        : posts.filter((p) => p.tag === selectedTag)
+        : posts.filter((p) => {
+            if (!p.tag) return false
+
+            const tagArray = p.tag
+              .split(",")
+              .map((t) => t.trim())
+
+            return tagArray.includes(selectedTag)
+          })
 
     if (sortType === "new") {
       filtered = [...filtered].sort(
@@ -108,7 +116,7 @@ export default function Home() {
   const popularPosts = [...posts]
     .sort((a, b) => b.likeCount - a.likeCount)
     .slice(0, 3)
-
+  
   return (
     <div className="min-h-[91vh] bg-gray-100">
       <div className="bg-white shadow px-10 py-4 flex gap-8 text-gray-600 font-medium sticky top-0 z-20">
@@ -200,9 +208,28 @@ export default function Home() {
                     </p>                    
                   </div>
 
-                  <p className="text-gray-600 mb-3">
+                  <p className="text-gray-600 h-32 break-all">
                     {post.content}
                   </p>
+
+                  {post.tag && (
+                    <div className="flex gap-2 mt-3 mb-3 text-xs items-center flex-wrap">
+                      <h3 className="text-gray-600 text-sm">Tag</h3>
+
+                      {post.tag
+                        .split(",")
+                        .map((t) => t.trim())
+                        .filter((t) => validTags.includes(t))
+                        .map((t) => (
+                          <span
+                            key={t}
+                            className="px-3 py-1 bg-teal-600 text-white rounded-full"
+                          >
+                            {t}
+                          </span>
+                        ))}
+                    </div>
+                  )}
 
                   <div className="flex justify-between text-sm text-gray-600">
                     <div className="flex items-center gap-4">
@@ -221,6 +248,12 @@ export default function Home() {
             ))}
           </div>
         </div>
+        <button
+          onClick={() => navigate("/createpost")}
+          className="fixed bottom-6 left-6 bg-teal-600 text-white px-5 py-3 rounded shadow-lg hover:bg-teal-700 transition z-50"
+        >
+          + Create Post
+        </button>
       </div>
     </div>
   )

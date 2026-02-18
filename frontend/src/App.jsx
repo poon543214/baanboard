@@ -5,6 +5,7 @@ import Post from "./pages/Post"
 import Contact from "./pages/Contact"
 import Profile from "./pages/Profile"
 import Search from "./pages/Search"
+import CreatPost from "./pages/CreatePost"
 import ProtectedRoute from "./components/ProtectedRoute"
 import MainLayout from "./layout/MainLayout"
 
@@ -20,6 +21,7 @@ export default function App() {
             <Route path="/contact" element={<Contact/>} />
             <Route path="/profile" element={<Profile/>} />
             <Route path="/search" element={<Search/>} />
+            <Route path="/createpost" element={<CreatPost/>} />
           </Route>
         </Route>
       </Routes>
