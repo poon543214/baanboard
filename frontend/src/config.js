@@ -10,9 +10,19 @@ const Configs = {
     },
     get: {
       post: "/post",
+      profile: "/profile",
+      likedpost: "/likedpost",
+      commentedpost: "/commentedpost"
     },
     post: {
       newPost: "/post"
+    },
+    put: {
+      updateProfile: "/profile",
+      updatePost: "/post/"
+    },
+    del: {
+      delete: "/deletepost/"
     }
   },
 

@@ -10,12 +10,12 @@ export const loginApi = async (email, password) => {
   return response.data;
 };
 
-export const registerApi = async (payload) => {
+export const registerApi = async (fullname, email, tel, password) => {
   const response = await client.post(Configs.api.auth.register, {
-    fullname: payload.fullname,
-    email: payload.email,
-    tel: payload.tel,
-    password: payload.password,
+    fullname,
+    email,
+    tel,
+    password
   });
 
   return response.data;

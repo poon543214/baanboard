@@ -12,7 +12,7 @@ export default function CreatePost() {
 
   const [title, setTitle] = useState("")
   const [content, setContent] = useState("")
-  const [selectedTags, setSelectedTags] = useState([]) // ✅ array
+  const [selectedTags, setSelectedTags] = useState([]) 
   const [image, setImage] = useState(null)
   const [preview, setPreview] = useState(null)
   const [loading, setLoading] = useState(false)

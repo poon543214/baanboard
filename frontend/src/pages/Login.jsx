@@ -39,17 +39,16 @@ export default function Login() {
     confirmPassword: "",
     agree: false,
   });
+
   const [errors, setErrors] = useState({});
   const validateRegister = () => {
     const newErrors = {};
     const { fullname, email, tel, password, confirmPassword } = registerData;
 
-    // 1️⃣ เช็ค fullname
     if (!fullname.trim()) {
       newErrors.fullname = "Full name is required";
     }
 
-    // 2️⃣ เช็ค email
     if (!email) {
       newErrors.email = "Email is required";
     } else {
@@ -59,7 +58,6 @@ export default function Login() {
       }
     }
 
-    // 3️⃣ เช็คเบอร์โทร (10 หลัก)
     if (!tel) {
       newErrors.tel = "Phone number is required";
     } else {
@@ -69,50 +67,50 @@ export default function Login() {
       }
     }
 
-    // 4️⃣ เช็ค password
     if (!password) {
       newErrors.password = "Password is required";
     } else if (password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
     }
 
-    // 5️⃣ เช็ค confirm password
     if (!confirmPassword) {
       newErrors.confirmPassword = "Please confirm password";
     } else if (password !== confirmPassword) {
       newErrors.confirmPassword = "Passwords do not match";
     }
-    // 6️⃣ ต้องติ๊กยอมรับ Terms
     if (!registerData.agree) {
       newErrors.agree = "You must agree to the terms";
     }
 
     setErrors(newErrors);
 
-    // ถ้าไม่มี error = ผ่าน
     return Object.keys(newErrors).length === 0;
   };
+
   const handleRegister = async () => {
     if (!validateRegister()) return;
 
     try {
-      const data = await registerApi(registerData);
+      const { fullname, email, tel, password } = registerData;
+
+      const data = await registerApi(fullname, email, tel, password);
 
       console.log("Register success:", data);
 
-      alert("Register success!");
+      alert("Register success! Please login.");
 
-      // ถ้าอยาก auto login หลังสมัคร
-      localStorage.setItem(Configs.storage.token, data.token);
-
-      login({
-        username: data.fullname,
-        fullname: data.fullname,
-        tel: data.tel,
-        email: data.email,
+      setRegisterData({
+        fullname: "",
+        email: "",
+        tel: "",
+        password: "",
+        confirmPassword: "",
+        agree: false,
       });
 
-      navigate("/");
+      // สลับกลับไปหน้า Login
+      setIsRegister(false);
+
     } catch (error) {
       console.error("Register failed:", error);
       alert("Register failed");
