@@ -8,7 +8,13 @@ const Configs = {
         login: "/login",
     },
     get: {
-        post: "/getpost"
+        post: "/getpost"  ,
+        mypost: "/mypost"
+    },
+    post: {
+        create: "/createpost",
+        update: "/updatepost",
+        delete: "/deletepost"
     }
   },
 

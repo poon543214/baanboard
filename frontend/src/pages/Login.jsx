@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext"
 import { useNavigate } from "react-router-dom"
 import bg from "../assets/image/bg.jpg"
 import { textStyles, COLORS } from "../style/text"
-import { loginApi } from "../api/auth"
+import { loginApi } from "../api/api"
 import Configs from "../config"
 
 export default function Login() {

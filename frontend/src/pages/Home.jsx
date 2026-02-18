@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react"
-import { getPostsApi } from "../api/get"
+import { getPostsApi } from "../api/api"
 import { useNavigate } from "react-router-dom"
 import { ThumbsUp, MessageSquare } from "lucide-react"
 
