@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getMyPostsApi } from "../api/post";
-import { FaTrash, FaEdit, FaThumbsUp, FaRegCommentDots } from "react-icons/fa";
+import { FaTrash, FaEdit} from "react-icons/fa";
+import { ThumbsUp, MessageSquare } from "lucide-react"
 import Configs from "../config";
 import client from "../api/client";
 import { useNavigate } from "react-router-dom";
@@ -39,6 +40,7 @@ export default function Post() {
 
   if (loading) return <p>Loading...</p>;
   if (error) return <p className="text-red-500">{error}</p>;
+  // console.log("my post: ", posts)
 
   return (
     <div className="min-h-[91vh] bg-gray-100 px-10 py-8">
@@ -46,9 +48,10 @@ export default function Post() {
         {posts.map((post) => (
           <div
             key={post._id}
-            className="bg-white rounded-lg border border-gray-300 overflow-hidden"
+            className="bg-white rounded-lg shadow overflow-hidden cursor-pointer hover:shadow-md transition"
           >
             <img
+              onClick={() => navigate(`/postdetail/${post._id}`)}
               src={post.image}
               alt="post"
               className="h-60 w-full object-cover"
@@ -79,7 +82,7 @@ export default function Post() {
                   post.tag.split(",").map((tag, index) => (
                     <span
                       key={index}
-                      className="px-3 py-1 bg-teal-500 text-white rounded-full"
+                      className="px-3 py-1 bg-teal-600 text-white rounded-full"
                     >
                       {tag.trim()}
                     </span>
@@ -93,13 +96,13 @@ export default function Post() {
 
               <div className="flex justify-between items-center mt-4 text-gray-700 text-sm">
                 <div className="flex items-center gap-2">
-                  <FaThumbsUp />
+                  <ThumbsUp size={18} />
                   {post.likeCount || 0}
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <FaRegCommentDots />
-                  {post.commentCount || 0}
+                  <MessageSquare size={18}/>
+                  {post.comments.length || 0}
                 </div>
               </div>
             </div>

@@ -15,7 +15,9 @@ const Configs = {
       commentedpost: "/commentedpost"
     },
     post: {
-      newPost: "/post"
+      newPost: "/post",
+      like: "/post/",
+      comment: "/post/"
     },
     put: {
       updateProfile: "/profile",

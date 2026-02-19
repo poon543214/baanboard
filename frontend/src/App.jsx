@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom"
 import Login from "./pages/Login"
 import Home from "./pages/Home"
 import Post from "./pages/Post"
+import PostDetail from "./pages/PostDetail"
 import Contact from "./pages/Contact"
 import Profile from "./pages/Profile"
 import EditProfile from "./pages/EditProfile"
@@ -24,6 +25,7 @@ export default function App() {
             <Route path="/profile" element={<Profile/>} />
             <Route path="/editprofile" element={<EditProfile/>} />
             <Route path="/editpost/:id" element={<EditPost/>} />
+            <Route path="/postdetail/:id" element={<PostDetail/>} />
             <Route path="/search" element={<Search/>} />
             <Route path="/createpost" element={<CreatPost/>} />
           </Route>

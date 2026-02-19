@@ -4,6 +4,7 @@ import client from "../api/client"
 import Configs from "../config"
 import { useNavigate } from "react-router-dom"
 import { textStyles } from "../style/text"
+import bg from "../assets/image/bg.jpg"
 
 export default function Profile() {
   const [profile, setProfile] = useState(null)
@@ -88,11 +89,11 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-white">
+      <div className="relative h-56">
+        <div className="absolute inset-0 bg-[#47A19C]/50" />
+        <div className="h-56 bg-gray-100" style={{ backgroundImage: `url(${bg})`}}/>              
+      </div>
 
-      {/* Cover */}
-      <div className="h-56 bg-gray-100" />
-
-      {/* Profile Info */}
       <div className="bg-white shadow relative">
         <div className="max-w-6xl mx-auto px-8 py-6 relative">
 
@@ -100,8 +101,7 @@ export default function Profile() {
             <div className="relative">
               <img
                 src={
-                  profile?.profileImage ||
-                  "https://via.placeholder.com/150"
+                  profile?.profileImage
                 }
                 alt="profile"
                 className={`w-40 h-40 rounded-full border-4 border-white object-cover ${
@@ -197,6 +197,7 @@ function PostCard({ post }) {
 
   return (
     <div
+      onClick={() => navigate(`/postdetail/${post._id}`)}
       className="bg-white rounded-lg shadow-sm border p-4 flex gap-4 cursor-pointer hover:shadow-md transition"
     >
       <img
