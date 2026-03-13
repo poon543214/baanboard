@@ -402,8 +402,24 @@ app.post('/post/:id/comment', authenticateToken, async (req, res) => {
     }
 });
 
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
+app.get('/health', async (req, res) => {
+    try {
+        const isConnected = mongoose.connection.readyState === 1;
+        
+        if (isConnected) {
+            await mongoose.connection.db.admin().ping();
+            return res.status(200).json({ 
+                status: 'online', 
+                database: 'ready' 
+            });
+        } else {
+            throw new Error('Database not connected');
+        }
+    } catch (error) {
+        console.error('Health check failed:', error);
+        res.status(500).json({ status: 'error', message: error.message });
+    }
 });
+
 // --- Server Start ---
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
