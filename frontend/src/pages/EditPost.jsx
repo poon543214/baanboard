@@ -4,6 +4,42 @@ import client from "../api/client"
 import Configs from "../config"
 import bg from "../assets/image/bg.jpg"
 import { textStyles } from "../style/text"
+import { useQuill } from "react-quilljs"
+import "quill/dist/quill.snow.css"
+
+function Editor({ value, onChange }) {
+  const { quill, quillRef } = useQuill({
+    theme: "snow",
+    modules: {
+      toolbar: [
+        [{ header: [1, 2, 3, false] }],
+        [{ font: [] }],
+        [{ size: [] }],
+        ["bold", "italic", "underline"],
+        [{ color: [] }, { background: [] }],
+        [{ align: [] }],
+        ["link", "image"],
+        ["clean"],
+      ],
+    },
+  })
+
+  useEffect(() => {
+    if (!quill) return
+    if (value && quill.root.innerHTML !== value) {
+      quill.root.innerHTML = value
+    }
+    const handler = () => {
+      onChange(quill.root.innerHTML)
+    }
+    quill.on("text-change", handler)
+    return () => {
+      quill.off("text-change", handler)
+    }
+  }, [quill, value])
+
+  return <div className="bg-white" ref={quillRef} />
+}
 
 export default function EditPost() {
   const navigate = useNavigate()
@@ -113,13 +149,11 @@ export default function EditPost() {
             <label className="text-sm font-semibold text-gray-800">
               Content
             </label>
-            <textarea
-              rows={5}
+            <Editor
               value={form.content}
-              onChange={(e) =>
-                setForm({ ...form, content: e.target.value })
+              onChange={(val) =>
+                setForm({ ...form, content: val })
               }
-              className="px-3 py-2 rounded-lg border bg-white/80 focus:outline-none focus:ring-2 focus:ring-teal-500"
             />
           </div>
 
