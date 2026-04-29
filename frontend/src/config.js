@@ -1,6 +1,9 @@
-const baseApiUrl = "https://baanboard-api.onrender.com";
+const baseApiUrl =
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? "http://localhost:3000" : "https://baanboard-api.onrender.com");
+
 const Configs = {
-  version: "V.1.0.0",
+  version: "V.1.1.0",
   api: {
     baseApiUrl: baseApiUrl,
     auth: {
