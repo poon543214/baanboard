@@ -6,7 +6,8 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
 require('dotenv').config();
 
 const app = express();
@@ -39,14 +40,7 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({ storage: storage });
 
-// --- 3.5 Nodemailer Setup (สำหรับส่งอีเมล) ---
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
+
 
 // --- 4. Schemas ---
 
@@ -177,32 +171,34 @@ app.post('/forgot-password', async (req, res) => {
             return res.status(404).json({ message: "ไม่พบบัญชีผู้ใช้นี้ในระบบ" });
         }
 
-        // สร้าง Secret โดยเอารหัสผ่านเก่ามาผสม เพื่อให้ Token หมดอายุทันทีที่รหัสผ่านถูกเปลี่ยน
         const secret = SECRET_KEY + user.password;
         const token = jwt.sign({ email: user.email, id: user._id }, secret, { expiresIn: '15m' });
-
         const resetLink = `${process.env.FRONTEND_URL}/reset-password/${user._id}/${token}`;
 
-        const mailOptions = {
-            from: `"BaanBoard Support" <${process.env.EMAIL_USER}>`,
+        // 2. เปลี่ยนคำสั่งส่งอีเมลมาใช้ Resend แทน Nodemailer
+        const { data, error } = await resend.emails.send({
+            from: 'BaanBoard <onboarding@resend.dev>', // ต้องใช้อีเมลนี้สำหรับสายฟรี
             to: user.email,
             subject: 'รีเซ็ตรหัสผ่าน - BaanBoard',
             html: `
                 <h2>รีเซ็ตรหัสผ่าน BaanBoard</h2>
                 <p>คุณได้ทำการขอรีเซ็ตรหัสผ่าน กรุณากดลิงก์ด้านล่างเพื่อตั้งรหัสผ่านใหม่ (ลิงก์นี้มีอายุ 15 นาที)</p>
                 <a href="${resetLink}" style="display:inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px;">ตั้งรหัสผ่านใหม่</a>
-                <p style="margin-top: 20px; font-size: 12px; color: #666;">หากคุณไม่ได้ทำรายการนี้ กรุณาเพิกเฉยต่ออีเมลฉบับนี้</p>
             `,
-        };
+        });
 
-        await transporter.sendMail(mailOptions);
+        // เช็คว่า API ของ Resend แจ้ง Error กลับมาไหม
+        if (error) {
+            console.error("Resend Error:", error);
+            return res.status(500).json({ message: "เกิดข้อผิดพลาดจากระบบส่งอีเมล" });
+        }
+
         res.status(200).json({ message: "ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว" });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: "เกิดข้อผิดพลาดในการส่งอีเมล" });
+        console.error("Server Error:", error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์" });
     }
 });
-
 // 📌 บันทึกรหัสผ่านใหม่
 app.post('/reset-password/:id/:token', async (req, res) => {
     try {
