@@ -125,6 +125,12 @@ export default function EditPost() {
   return (
     <div className="min-h-[90.8vh] flex items-center justify-center bg-[#f0f4f3]">
       <div className="relative bg-white rounded-[40px] shadow-xl w-[700px] max-w-full p-12 overflow-hidden">
+        <button
+          onClick={() => navigate(-1)}
+          className="absolute top-4 left-4 z-20 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+        >
+          Back
+        </button>
 
         <div
           className="absolute inset-0 bg-cover bg-center scale-110 opacity-10"

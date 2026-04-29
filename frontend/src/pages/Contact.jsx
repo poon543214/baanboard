@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { getMyChatMessagesApi, sendChatMessageApi } from "../api/chat"
 
 export default function Contact() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [messages, setMessages] = useState([])
   const [draft, setDraft] = useState("")
   const [loading, setLoading] = useState(true)
@@ -63,6 +65,12 @@ export default function Contact() {
     <div className="min-h-[91vh] bg-gray-100 flex items-center justify-center p-6">
       <div className="w-full max-w-3xl bg-white rounded-xl shadow-md overflow-hidden">
         <div className="px-6 py-4 border-b">
+          <button
+            onClick={() => navigate(-1)}
+            className="mb-3 px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Back
+          </button>
           <h1 className="text-xl font-semibold text-gray-800">Contact us chat</h1>
           <p className="text-sm text-gray-500 mt-1">
             Chat directly with admin support. Signed in as {username}

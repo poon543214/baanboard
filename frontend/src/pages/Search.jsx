@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react"
-import { useAuth } from "../context/AuthContext"
 import { useLocation, useNavigate } from "react-router-dom"
 import client from "../api/client"
 import Configs from "../config"
 import { ThumbsUp, MessageSquare } from "lucide-react"
 
 export default function Search() {
-  const { user } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -41,6 +39,12 @@ export default function Search() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-10">
+      <button
+        onClick={() => navigate(-1)}
+        className="mb-4 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+      >
+        Back
+      </button>
 
       <h1 className="text-xl font-bold mb-2">
         Search result 
@@ -56,7 +60,8 @@ export default function Search() {
         {posts.map((post) => (
           <div
             key={post._id}
-            className="bg-white rounded shadow p-4 flex gap-6"
+            onClick={() => navigate(`/postdetail/${post._id}`)}
+            className="bg-white rounded shadow p-4 flex gap-6 cursor-pointer hover:shadow-md transition"
           >
             <img
               src={post.image}
@@ -67,10 +72,7 @@ export default function Search() {
             <div className="flex-1">
 
               <div className="flex justify-between">
-                <h3
-                  onClick={() => navigate(`/post/${post._id}`)}
-                  className="text-teal-600 font-semibold mb-2 cursor-pointer hover:underline"
-                >
+                <h3 className="text-teal-600 font-semibold mb-2 hover:underline">
                   {post.title}
                 </h3>
 

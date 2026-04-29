@@ -10,7 +10,9 @@ import EditPost from "./pages/EditPost"
 import Search from "./pages/Search"
 import CreatPost from "./pages/CreatePost"
 import AdminChat from "./pages/AdminChat"
+import AdminDashboard from "./pages/AdminDashboard"
 import ProtectedRoute from "./components/ProtectedRoute"
+import AdminRoute from "./components/AdminRoute"
 import MainLayout from "./layout/MainLayout"
 import ForgotPassword from "./pages/ForgotPassword"
 import ResetPassword from "./pages/ResetPassword"
@@ -27,13 +29,16 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/post" element={<Post />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="/admin/chat" element={<AdminChat />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/editprofile" element={<EditProfile />} />
             <Route path="/editpost/:id" element={<EditPost />} />
             <Route path="/postdetail/:id" element={<PostDetail />} />
             <Route path="/search" element={<Search />} />
             <Route path="/createpost" element={<CreatPost />} />
+            <Route element={<AdminRoute />}>
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/chat" element={<AdminChat />} />
+            </Route>
           </Route>
         </Route>
       </Routes>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import bg from "../assets/image/bg.jpg";
@@ -27,6 +27,15 @@ export default function Login() {
   });
   const [errors, setErrors] = useState({});
   const [showTerms, setShowTerms] = useState(false); // เพิ่ม State เปิด/ปิด Modal Terms
+  const [sessionMessage, setSessionMessage] = useState("");
+
+  useEffect(() => {
+    const reason = localStorage.getItem("auth_logout_reason");
+    if (reason === "session_expired") {
+      setSessionMessage("Session expired. Please login again.");
+      localStorage.removeItem("auth_logout_reason");
+    }
+  }, []);
 
   const handleLogin = async () => {
     try {
@@ -141,6 +150,11 @@ export default function Login() {
           >
             <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            {sessionMessage ? (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-2 rounded-md mt-2">
+                {sessionMessage}
+              </p>
+            ) : null}
 
             <div className="flex justify-between text-xs text-gray-700 mt-3">
               <label className="flex items-center cursor-pointer">

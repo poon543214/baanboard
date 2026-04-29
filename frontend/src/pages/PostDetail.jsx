@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import client from "../api/client"
 import Configs from "../config"
 import { ThumbsUp, MessageSquare } from "lucide-react"
 
 export default function PostDetail() {
     const { id } = useParams()
+    const navigate = useNavigate()
     const [post, setPost] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -107,6 +108,14 @@ export default function PostDetail() {
 
     return (
         <div className="min-h-[91vh] bg-gray-100">
+            <div className="px-10 pt-6">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+                >
+                    Back
+                </button>
+            </div>
             <div className="bg-white p-10 shadow-sm">
                 <div className="flex gap-10 min-h-[40vh] relative items-center">
                 <img
@@ -191,7 +200,17 @@ export default function PostDetail() {
                         >
                         <div className="flex justify-between mb-3">
                             <div className="flex items-center gap-3">
-                            <div className="w-6 h-6 bg-gray-400 rounded-full" />
+                            {comment.owner?.profileImage ? (
+                                <img
+                                    src={comment.owner.profileImage}
+                                    alt={comment.owner?.fullname || "comment owner"}
+                                    className="w-8 h-8 rounded-full object-cover"
+                                />
+                            ) : (
+                                <div className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center text-xs font-semibold">
+                                    {(comment.owner?.fullname || "?").charAt(0).toUpperCase()}
+                                </div>
+                            )}
                             <span className="font-medium text-gray-800">
                                 {comment.owner?.fullname}
                             </span>

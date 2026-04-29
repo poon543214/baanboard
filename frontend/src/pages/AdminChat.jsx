@@ -5,6 +5,7 @@ export default function AdminChat() {
   const [messages, setMessages] = useState([])
   const [selectedUserId, setSelectedUserId] = useState("")
   const [draft, setDraft] = useState("")
+  const [searchKeyword, setSearchKeyword] = useState("")
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState("")
@@ -39,6 +40,17 @@ export default function AdminChat() {
     })
     return Array.from(userMap.values())
   }, [messages])
+
+  const filteredUsers = useMemo(() => {
+    const keyword = searchKeyword.trim().toLowerCase()
+    if (!keyword) return users
+    return users.filter((item) => {
+      return (
+        item.fullname?.toLowerCase().includes(keyword) ||
+        item.email?.toLowerCase().includes(keyword)
+      )
+    })
+  }, [users, searchKeyword])
 
   useEffect(() => {
     if (selectedUserId) return
@@ -79,30 +91,36 @@ export default function AdminChat() {
 
   return (
     <div className="min-h-[91vh] bg-gray-100 p-6">
-      <div className="max-w-6xl mx-auto bg-white rounded-xl shadow overflow-hidden">
-        <div className="px-6 py-4 border-b">
-          <h1 className="text-xl font-semibold text-gray-800">Admin Chat Inbox</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage all contact conversations here</p>
+      <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-lg border overflow-hidden">
+        <div className="px-6 py-4 border-b bg-gradient-to-r from-secondary to-primary">
+          <h1 className="text-xl font-semibold text-white">Admin Chat Inbox</h1>
+          <p className="text-sm text-white/85 mt-1">Manage all contact conversations here</p>
         </div>
 
         {loading ? (
           <p className="p-6 text-sm text-gray-500">Loading chats...</p>
         ) : (
           <div className="grid grid-cols-12 min-h-[520px]">
-            <aside className="col-span-4 border-r bg-gray-50">
-              <div className="p-3 border-b bg-white">
-                <h2 className="text-sm font-medium text-gray-700">Conversations</h2>
+            <aside className="col-span-4 border-r bg-slate-50">
+              <div className="p-3 border-b bg-white space-y-2">
+                <h2 className="text-sm font-medium text-gray-700">Conversations ({filteredUsers.length})</h2>
+                <input
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  placeholder="Search by name or email"
+                  className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
               </div>
-              {users.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <p className="p-4 text-sm text-gray-500">No messages yet.</p>
               ) : (
                 <div className="divide-y">
-                  {users.map((item) => (
+                  {filteredUsers.map((item) => (
                     <button
                       key={item._id}
                       onClick={() => setSelectedUserId(item._id)}
                       className={`w-full text-left p-4 hover:bg-white transition ${
-                        selectedUserId === item._id ? "bg-white" : ""
+                        selectedUserId === item._id ? "bg-white border-l-4 border-l-primary" : ""
                       }`}
                     >
                       <p className="font-medium text-sm text-gray-800">{item.fullname}</p>
@@ -113,8 +131,8 @@ export default function AdminChat() {
               )}
             </aside>
 
-            <section className="col-span-8 flex flex-col">
-              <div ref={listRef} className="flex-1 p-4 space-y-3 overflow-y-auto bg-gray-50">
+            <section className="col-span-8 flex flex-col bg-white">
+              <div ref={listRef} className="flex-1 p-4 space-y-3 overflow-y-auto bg-gradient-to-b from-slate-50 to-white">
                 {!selectedUserId ? (
                   <p className="text-sm text-gray-500">Select a conversation.</p>
                 ) : selectedMessages.length === 0 ? (
@@ -126,7 +144,7 @@ export default function AdminChat() {
                       <div key={message._id} className={`flex ${isAdmin ? "justify-end" : "justify-start"}`}>
                         <div
                           className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
-                            isAdmin ? "bg-primary text-white" : "bg-white border text-gray-700"
+                            isAdmin ? "bg-primary text-white shadow" : "bg-white border text-gray-700"
                           }`}
                         >
                           <p>{message.text}</p>

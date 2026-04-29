@@ -41,19 +41,29 @@ export default function Header() {
             >
               My post
             </button>
-            <button
-              onClick={() => navigate("/contact")}
-              className={menuClass("/contact")}
-            >
-              Contact us
-            </button>
-            {user?.role === "admin" ? (
+            {user?.role !== "admin" ? (
               <button
-                onClick={() => navigate("/admin/chat")}
-                className={menuClass("/admin/chat")}
+                onClick={() => navigate("/contact")}
+                className={menuClass("/contact")}
               >
-                Admin chat
+                Contact us
               </button>
+            ) : null}
+            {user?.role === "admin" ? (
+              <>
+                <button
+                  onClick={() => navigate("/admin/dashboard")}
+                  className={menuClass("/admin/dashboard")}
+                >
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => navigate("/admin/chat")}
+                  className={menuClass("/admin/chat")}
+                >
+                  Admin chat
+                </button>
+              </>
             ) : null}
           </div>
           <div className="flex items-center gap-4">

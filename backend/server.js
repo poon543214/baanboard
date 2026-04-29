@@ -6,9 +6,9 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
 require('dotenv').config();
+const { Resend } = require('resend');
+const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -164,6 +164,10 @@ app.post('/login', async (req, res) => {
 // 📌 ขอลิงก์รีเซ็ตรหัสผ่าน (ลืมรหัสผ่าน)
 app.post('/forgot-password', async (req, res) => {
     try {
+        if (!resend) {
+            return res.status(500).json({ message: "ยังไม่ได้ตั้งค่า RESEND_API_KEY" });
+        }
+
         const { email } = req.body;
         const user = await User.findOne({ email });
 
@@ -545,6 +549,86 @@ app.post('/chat/messages/:userId/reply', authenticateToken, requireAdmin, async 
         });
 
         res.status(201).json(message);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Admin: dashboard summary stats
+app.get('/admin/dashboard', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const [users, posts, messages] = await Promise.all([
+            User.find().select('_id role').lean(),
+            Post.find().select('likes comments created_at').lean(),
+            ChatMessage.find().select('user senderRole created_at').lean()
+        ]);
+
+        const adminCount = users.filter((user) => user.role === 'admin').length;
+        const userCount = users.length - adminCount;
+        const postCount = posts.length;
+        const totalLikes = posts.reduce((sum, post) => sum + (post.likes?.length || 0), 0);
+        const totalComments = posts.reduce((sum, post) => sum + (post.comments?.length || 0), 0);
+        const totalMessages = messages.length;
+        const totalEngagement = totalLikes + totalComments;
+
+        const postsLast7Days = posts.filter((post) => {
+            const createdAt = new Date(post.created_at).getTime();
+            const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+            return createdAt >= sevenDaysAgo;
+        }).length;
+
+        const pendingReplyUsers = new Set();
+        const latestByUser = new Map();
+
+        messages.forEach((message) => {
+            if (!message.user) return;
+            const userId = message.user.toString();
+            const current = latestByUser.get(userId);
+            if (!current || new Date(message.created_at) > new Date(current.created_at)) {
+                latestByUser.set(userId, message);
+            }
+        });
+
+        latestByUser.forEach((message, userId) => {
+            if (message.senderRole === 'user') pendingReplyUsers.add(userId);
+        });
+
+        const totalConversations = latestByUser.size;
+        const openConversations = pendingReplyUsers.size;
+        const closedConversations = Math.max(0, totalConversations - openConversations);
+
+        const adminRatio = users.length ? Math.round((adminCount / users.length) * 100) : 0;
+        const memberRatio = users.length ? Math.round((userCount / users.length) * 100) : 0;
+        const pendingSupportRatio = totalConversations
+            ? Math.round((openConversations / totalConversations) * 100)
+            : 0;
+        const avgEngagementPerPost = postCount
+            ? Math.round((totalEngagement / postCount) * 100) / 100
+            : 0;
+
+        res.json({
+            users: {
+                total: users.length,
+                admins: adminCount,
+                members: userCount,
+                adminRatio,
+                memberRatio
+            },
+            posts: {
+                total: postCount,
+                last7Days: postsLast7Days,
+                likes: totalLikes,
+                comments: totalComments,
+                avgEngagementPerPost
+            },
+            chats: {
+                totalMessages,
+                totalConversations,
+                openConversations,
+                closedConversations,
+                pendingSupportRatio
+            }
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

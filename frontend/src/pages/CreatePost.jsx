@@ -70,6 +70,12 @@ export default function CreatePost() {
   return (
     <div className="min-h-[91vh] flex justify-center bg-gray-100 py-10">
       <div className="bg-white shadow rounded w-1/2 p-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-4 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50"
+        >
+          Back
+        </button>
         <h2 className="text-2xl font-semibold mb-6 text-teal-600">
           Create New Post
         </h2>
