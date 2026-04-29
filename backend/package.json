@@ -1,6 +1,6 @@
 {
   "name": "baanboard-backend",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Backend API server for Baanboard",
   "main": "server.js",
   "scripts": {
@@ -19,7 +19,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.5",
     "multer": "^2.0.2",
-    "multer-storage-cloudinary": "^4.0.0"
+    "multer-storage-cloudinary": "^4.0.0",
+    "nodemailer": "^8.0.7"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

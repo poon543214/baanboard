@@ -1,10 +1,11 @@
 import client from "./client";
 import Configs from "../config";
 
-export const loginApi = async (email, password) => {
+export const loginApi = async (email, password, rememberMe) => {
   const response = await client.post(Configs.api.auth.login, {
     email,
     password,
+    rememberMe
   });
 
   return response.data;

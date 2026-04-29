@@ -3,12 +3,14 @@ const baseApiUrl =
   (import.meta.env.DEV ? "http://localhost:3000" : "https://baanboard-api.onrender.com");
 
 const Configs = {
-  version: "V.1.1.0",
+  version: "V.1.2.0",
   api: {
     baseApiUrl: baseApiUrl,
     auth: {
       login: "/login",
       register: "/register",
+      forgotPassword: "/forgot-password",
+      resetPassword: "/reset-password",
     },
     get: {
       post: "/post",

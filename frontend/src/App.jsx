@@ -12,24 +12,28 @@ import CreatPost from "./pages/CreatePost"
 import AdminChat from "./pages/AdminChat"
 import ProtectedRoute from "./components/ProtectedRoute"
 import MainLayout from "./layout/MainLayout"
+import ForgotPassword from "./pages/ForgotPassword"
+import ResetPassword from "./pages/ResetPassword"
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:id/:token" element={<ResetPassword />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
-            <Route path="/post" element={<Post/>} />
-            <Route path="/contact" element={<Contact/>} />
-            <Route path="/admin/chat" element={<AdminChat/>} />
-            <Route path="/profile" element={<Profile/>} />
-            <Route path="/editprofile" element={<EditProfile/>} />
-            <Route path="/editpost/:id" element={<EditPost/>} />
-            <Route path="/postdetail/:id" element={<PostDetail/>} />
-            <Route path="/search" element={<Search/>} />
-            <Route path="/createpost" element={<CreatPost/>} />
+            <Route path="/post" element={<Post />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/admin/chat" element={<AdminChat />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/editprofile" element={<EditProfile />} />
+            <Route path="/editpost/:id" element={<EditPost />} />
+            <Route path="/postdetail/:id" element={<PostDetail />} />
+            <Route path="/search" element={<Search />} />
+            <Route path="/createpost" element={<CreatPost />} />
           </Route>
         </Route>
       </Routes>

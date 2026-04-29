@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const app = express();
@@ -38,6 +39,15 @@ const storage = new CloudinaryStorage({
 
 const upload = multer({ storage: storage });
 
+// --- 3.5 Nodemailer Setup (สำหรับส่งอีเมล) ---
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
 // --- 4. Schemas ---
 
 // User Schema
@@ -58,14 +68,12 @@ const commentSchema = new mongoose.Schema({
     created_at: { type: Date, default: Date.now }
 });
 
+// Post Schema
 const postSchema = new mongoose.Schema({
     title: { type: String, required: true },
     content: { type: String, required: true },
     image: { type: String },
-    tag: { 
-        type: String, 
-        required: true 
-    },
+    tag: { type: String, required: true },
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], 
     comments: [commentSchema],
@@ -128,17 +136,21 @@ app.post('/register', upload.single('profileImage'), async (req, res) => {
 
 app.post('/login', async (req, res) => {
     try {
-        const { email, password } = req.body;
+        // 1. รับค่า rememberMe เพิ่มจาก req.body (ส่งมาจากหน้า Frontend)
+        const { email, password, rememberMe } = req.body; 
         const user = await User.findOne({ email });
         
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(400).json({ message: "Invalid email or password" });
         }
 
+        // 2. ตรวจสอบเงื่อนไข: ถ้า rememberMe เป็น true ให้ Token อยู่ได้ 7 วัน, ถ้าไม่ ให้อยู่แค่ 2 ชั่วโมง
+        const expireTime = rememberMe ? '7d' : '2h';
+
         const token = jwt.sign(
             { id: user._id, role: user.role, fullname: user.fullname, email: user.email }, 
             SECRET_KEY, 
-            { expiresIn: '2h' }
+            { expiresIn: expireTime } // 3. นำตัวแปร expireTime มาใส่ตรงนี้
         );
 
         res.json({ 
@@ -155,6 +167,73 @@ app.post('/login', async (req, res) => {
     }
 });
 
+// 📌 ขอลิงก์รีเซ็ตรหัสผ่าน (ลืมรหัสผ่าน)
+app.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ message: "ไม่พบบัญชีผู้ใช้นี้ในระบบ" });
+        }
+
+        // สร้าง Secret โดยเอารหัสผ่านเก่ามาผสม เพื่อให้ Token หมดอายุทันทีที่รหัสผ่านถูกเปลี่ยน
+        const secret = SECRET_KEY + user.password;
+        const token = jwt.sign({ email: user.email, id: user._id }, secret, { expiresIn: '15m' });
+
+        const resetLink = `${process.env.FRONTEND_URL}/reset-password/${user._id}/${token}`;
+
+        const mailOptions = {
+            from: `"BaanBoard Support" <${process.env.EMAIL_USER}>`,
+            to: user.email,
+            subject: 'รีเซ็ตรหัสผ่าน - BaanBoard',
+            html: `
+                <h2>รีเซ็ตรหัสผ่าน BaanBoard</h2>
+                <p>คุณได้ทำการขอรีเซ็ตรหัสผ่าน กรุณากดลิงก์ด้านล่างเพื่อตั้งรหัสผ่านใหม่ (ลิงก์นี้มีอายุ 15 นาที)</p>
+                <a href="${resetLink}" style="display:inline-block; padding: 10px 20px; background-color: #3b82f6; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px;">ตั้งรหัสผ่านใหม่</a>
+                <p style="margin-top: 20px; font-size: 12px; color: #666;">หากคุณไม่ได้ทำรายการนี้ กรุณาเพิกเฉยต่ออีเมลฉบับนี้</p>
+            `,
+        };
+
+        await transporter.sendMail(mailOptions);
+        res.status(200).json({ message: "ส่งลิงก์รีเซ็ตรหัสผ่านไปยังอีเมลของคุณแล้ว" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดในการส่งอีเมล" });
+    }
+});
+
+// 📌 บันทึกรหัสผ่านใหม่
+app.post('/reset-password/:id/:token', async (req, res) => {
+    try {
+        const { id, token } = req.params;
+        const { newPassword } = req.body;
+
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ message: "ไม่พบผู้ใช้งาน" });
+        }
+
+        // ตรวจสอบ Token
+        const secret = SECRET_KEY + user.password;
+        try {
+            jwt.verify(token, secret);
+        } catch (error) {
+            return res.status(400).json({ message: "ลิงก์หมดอายุหรือไม่ถูกต้อง" });
+        }
+
+        // เข้ารหัสผ่านใหม่แล้วบันทึก
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(newPassword, salt);
+        await user.save();
+
+        res.status(200).json({ message: "เปลี่ยนรหัสผ่านสำเร็จแล้ว สามารถเข้าสู่ระบบใหม่ได้เลย" });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "เกิดข้อผิดพลาดจากเซิร์ฟเวอร์" });
+    }
+});
+
 // --- 7. Routes: Profile & User Data ---
 
 // Get My Profile
@@ -166,6 +245,7 @@ app.get('/profile', authenticateToken, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 // Edit My Profile
 app.put('/profile', authenticateToken, upload.single('profileImage'), async (req, res) => {
     try {
@@ -198,8 +278,6 @@ app.post('/post', authenticateToken, upload.single('image'), async (req, res) =>
             image, 
             owner: req.user.id
         });
-
-        // ตัดการ update User ทิ้งไปเลย (ลดการทำงาน Database)
         
         res.status(201).json(newPost);
     } catch (err) {
@@ -235,6 +313,7 @@ app.get('/post', authenticateToken, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
 // 3. Get Post by ID
 app.get('/post/:id', authenticateToken, async (req, res) => {
     try {
@@ -254,7 +333,6 @@ app.get('/post/:id', authenticateToken, async (req, res) => {
 // 4. Get My Posts
 app.get('/mypost', authenticateToken, async (req, res) => {
     try {
-        // ค้นหา Post ที่เจ้าของคือ ID ของคน Login
         const posts = await Post.find({ owner: req.user.id }) 
             .populate('owner', 'fullname role profileImage')
             .populate('comments.owner', 'fullname role profileImage')
@@ -272,7 +350,6 @@ app.get('/mypost', authenticateToken, async (req, res) => {
 // 5. Get Liked Posts
 app.get('/likedpost', authenticateToken, async (req, res) => {
     try {
-        // ค้นหา Post ที่ใน Array likes มี ID ของเราอยู่
         const posts = await Post.find({ likes: req.user.id }) 
             .populate('owner', 'fullname role profileImage')
             .populate('comments.owner', 'fullname role profileImage')
@@ -290,7 +367,6 @@ app.get('/likedpost', authenticateToken, async (req, res) => {
 // 6. Get Commented Posts
 app.get('/commentedpost', authenticateToken, async (req, res) => {
     try {
-        // ค้นหา Post ที่มี comments ไหนสักอันที่เป็นของเรา
         const posts = await Post.find({ "comments.owner": req.user.id }) 
             .populate('owner', 'fullname role profileImage')
             .populate('comments.owner', 'fullname role profileImage')
@@ -305,14 +381,13 @@ app.get('/commentedpost', authenticateToken, async (req, res) => {
     }
 });
 
-// 7. Get Posts by User ID (ดูโพสต์คนอื่น) (ยังไม่ใช้ แต่เผื่อไว้)
+// 7. Get Posts by User ID 
 app.get('/user/:id/posts', authenticateToken, async (req, res) => {
     try {
         const userId = req.params.id;
-        // ค้นหา Post ที่ owner ตรงกับ ID ที่ส่งมา
         const posts = await Post.find({ owner: userId })
             .populate('owner', 'fullname role profileImage')
-            .populate('comments.owner', 'fullname role profileImage') // เพิ่ม populate comment owner ให้ด้วย
+            .populate('comments.owner', 'fullname role profileImage') 
             .sort({ created_at: -1 });
 
         res.json(posts.map(p => ({
@@ -337,7 +412,6 @@ app.delete('/deletepost/:id', authenticateToken, async (req, res) => {
         
         await Post.findByIdAndDelete(req.params.id);
         
-        // ตัดการ update User ทิ้งไป
         res.json({ message: "Deleted" });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -381,15 +455,12 @@ app.post('/post/:id/like', authenticateToken, async (req, res) => {
         const index = post.likes.findIndex(id => id.toString() === userId);
         
         if (index === -1) {
-            // Like
             post.likes.push(userId);
         } else {
-            // Unlike
             post.likes.splice(index, 1);
         }
         
         await post.save();
-        // ตัดการ update User ทิ้งไป
 
         res.json({ likeCount: post.likes.length });
     } catch (err) {
@@ -410,8 +481,6 @@ app.post('/post/:id/comment', authenticateToken, async (req, res) => {
         post.comments.push({ text, owner: userId });
         await post.save();
 
-        // ตัดการ update User ทิ้งไป
-
         res.status(201).json(post);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -419,7 +488,7 @@ app.post('/post/:id/comment', authenticateToken, async (req, res) => {
 });
 
 // --- 10. Routes: Contact Chat ---
-// User: get own messages
+
 app.get('/chat/messages', authenticateToken, async (req, res) => {
     try {
         const messages = await ChatMessage.find({ user: req.user.id }).sort({ created_at: 1 });
@@ -429,7 +498,6 @@ app.get('/chat/messages', authenticateToken, async (req, res) => {
     }
 });
 
-// User: send message
 app.post('/chat/messages', authenticateToken, async (req, res) => {
     try {
         const { text } = req.body;
@@ -449,7 +517,6 @@ app.post('/chat/messages', authenticateToken, async (req, res) => {
     }
 });
 
-// Admin: view all users' messages
 app.get('/chat/messages/all', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const messages = await ChatMessage.find()
@@ -461,7 +528,6 @@ app.get('/chat/messages/all', authenticateToken, requireAdmin, async (req, res) 
     }
 });
 
-// Admin: reply to a specific user
 app.post('/chat/messages/:userId/reply', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { text } = req.body;
