@@ -9,6 +9,7 @@ import EditProfile from "./pages/EditProfile"
 import EditPost from "./pages/EditPost"
 import Search from "./pages/Search"
 import CreatPost from "./pages/CreatePost"
+import AdminChat from "./pages/AdminChat"
 import ProtectedRoute from "./components/ProtectedRoute"
 import MainLayout from "./layout/MainLayout"
 
@@ -22,6 +23,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/post" element={<Post/>} />
             <Route path="/contact" element={<Contact/>} />
+            <Route path="/admin/chat" element={<AdminChat/>} />
             <Route path="/profile" element={<Profile/>} />
             <Route path="/editprofile" element={<EditProfile/>} />
             <Route path="/editpost/:id" element={<EditPost/>} />

@@ -19,10 +19,13 @@ export default function Login() {
       localStorage.setItem(Configs.storage.token, data.token);
       // console.log(data.token)
       login({
+        id: data.id,
         username: data.fullname,
         fullname: data.fullname,
         tel: data.tel,
         email: data.email,
+        role: data.role,
+        profileImage: data.profileImage,
       });
       console.log("login success : ", data);
       navigate("/");

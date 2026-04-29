@@ -73,6 +73,15 @@ const postSchema = new mongoose.Schema({
 });
 const Post = mongoose.model('Post', postSchema);
 
+// Chat Schema (Contact us)
+const chatMessageSchema = new mongoose.Schema({
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    senderRole: { type: String, enum: ['user', 'admin'], required: true },
+    text: { type: String, required: true, trim: true },
+    created_at: { type: Date, default: Date.now }
+});
+const ChatMessage = mongoose.model('ChatMessage', chatMessageSchema);
+
 // --- 5. Auth Middleware ---
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -84,6 +93,13 @@ const authenticateToken = (req, res, next) => {
         req.user = user;
         next();
     });
+};
+
+const requireAdmin = (req, res, next) => {
+    if (req.user?.role !== 'admin') {
+        return res.status(403).json({ message: 'Admin only' });
+    }
+    next();
 };
 
 // --- 6. Routes: Authentication ---
@@ -397,6 +413,76 @@ app.post('/post/:id/comment', authenticateToken, async (req, res) => {
         // ตัดการ update User ทิ้งไป
 
         res.status(201).json(post);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- 10. Routes: Contact Chat ---
+// User: get own messages
+app.get('/chat/messages', authenticateToken, async (req, res) => {
+    try {
+        const messages = await ChatMessage.find({ user: req.user.id }).sort({ created_at: 1 });
+        res.json(messages);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// User: send message
+app.post('/chat/messages', authenticateToken, async (req, res) => {
+    try {
+        const { text } = req.body;
+        if (!text || !text.trim()) {
+            return res.status(400).json({ message: 'Message is required' });
+        }
+
+        const message = await ChatMessage.create({
+            user: req.user.id,
+            senderRole: 'user',
+            text: text.trim()
+        });
+
+        res.status(201).json(message);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Admin: view all users' messages
+app.get('/chat/messages/all', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const messages = await ChatMessage.find()
+            .populate('user', 'fullname email profileImage role')
+            .sort({ created_at: 1 });
+        res.json(messages);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Admin: reply to a specific user
+app.post('/chat/messages/:userId/reply', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { text } = req.body;
+        const { userId } = req.params;
+
+        if (!text || !text.trim()) {
+            return res.status(400).json({ message: 'Message is required' });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        const message = await ChatMessage.create({
+            user: userId,
+            senderRole: 'admin',
+            text: text.trim()
+        });
+
+        res.status(201).json(message);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

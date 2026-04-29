@@ -8,7 +8,7 @@ import Logo from "../assets/image/logo.png"
 export default function Header() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
   const [keyword, setKeyword] = useState("")
 
   const handleSearch = (e) => {
@@ -47,6 +47,14 @@ export default function Header() {
             >
               Contact us
             </button>
+            {user?.role === "admin" ? (
+              <button
+                onClick={() => navigate("/admin/chat")}
+                className={menuClass("/admin/chat")}
+              >
+                Admin chat
+              </button>
+            ) : null}
           </div>
           <div className="flex items-center gap-4">
             <button

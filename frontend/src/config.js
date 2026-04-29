@@ -1,5 +1,4 @@
 const baseApiUrl = "https://baanboard-api.onrender.com";
-// const baseApiUrl = "http://localhost:3000/"
 const Configs = {
   version: "V.1.0.0",
   api: {
